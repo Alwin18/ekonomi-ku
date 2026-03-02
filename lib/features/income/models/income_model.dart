@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class IncomeModel extends Equatable {
   final String? id;
@@ -38,6 +39,7 @@ class IncomeModel extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
+      'user_id': userId ?? Supabase.instance.client.auth.currentUser?.id,
       'amount': amount,
       'description': description,
       'transaction_date': transactionDate.toIso8601String().split('T').first,

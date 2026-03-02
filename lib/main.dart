@@ -4,6 +4,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'features/auth/bloc/auth_bloc.dart';
+import 'features/auth/bloc/auth_event.dart';
+import 'features/auth/repository/auth_repository.dart';
 import 'features/dashboard/bloc/dashboard_bloc.dart';
 import 'features/dashboard/repository/dashboard_repository.dart';
 import 'features/expense/bloc/expense_bloc.dart';
@@ -35,6 +38,11 @@ class EkonomiKuApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
+        BlocProvider(
+          create: (_) =>
+              AuthBloc(repository: AuthRepository())
+                ..add(const AuthCheckRequested()),
+        ),
         BlocProvider(
           create: (_) => DashboardBloc(repository: DashboardRepository()),
         ),

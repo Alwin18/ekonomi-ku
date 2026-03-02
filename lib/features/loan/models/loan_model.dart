@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoanModel extends Equatable {
   final String? id;
@@ -51,6 +52,7 @@ class LoanModel extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       if (id != null) 'id': id,
+      'user_id': userId ?? Supabase.instance.client.auth.currentUser?.id,
       'amount': amount,
       'description': description,
       'status': status,
