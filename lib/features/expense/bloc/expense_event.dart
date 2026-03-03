@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../core/models/list_filter.dart';
 import '../models/expense_model.dart';
 
 abstract class ExpenseEvent extends Equatable {
@@ -9,11 +10,11 @@ abstract class ExpenseEvent extends Equatable {
 }
 
 class LoadExpenses extends ExpenseEvent {
-  final DateTime? month;
-  const LoadExpenses({this.month});
+  final ListFilter? filter;
+  const LoadExpenses({this.filter});
 
   @override
-  List<Object?> get props => [month];
+  List<Object?> get props => [filter];
 }
 
 class AddExpense extends ExpenseEvent {

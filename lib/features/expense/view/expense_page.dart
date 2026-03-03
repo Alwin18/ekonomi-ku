@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/models/list_filter.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/widgets/list_filter_widget.dart';
 import '../bloc/expense_bloc.dart';
 import '../bloc/expense_event.dart';
 import '../bloc/expense_state.dart';
@@ -17,7 +19,7 @@ class ExpensePage extends StatefulWidget {
 }
 
 class _ExpensePageState extends State<ExpensePage> {
-  DateTime? _selectedMonth;
+  ListFilter? _activeFilter;
 
   @override
   void initState() {
@@ -69,32 +71,29 @@ class _ExpensePageState extends State<ExpensePage> {
     );
   }
 
-  void _filterByMonth(DateTime? month) {
-    setState(() => _selectedMonth = month);
-    context.read<ExpenseBloc>().add(LoadExpenses(month: month));
+  void _onFilterApply(ListFilter? filter) {
+    setState(() => _activeFilter = filter);
+    context.read<ExpenseBloc>().add(LoadExpenses(filter: filter));
+  }
+
+  String _filterLabel() {
+    if (_activeFilter == null) return '';
+    switch (_activeFilter!.filterType) {
+      case ListFilterType.dateRange:
+        return '${DateFormatter.formatDisplay(_activeFilter!.startDate!)} – ${DateFormatter.formatDisplay(_activeFilter!.endDate!)}';
+      case ListFilterType.monthly:
+        return DateFormatter.formatMonthYear(
+          DateTime(_activeFilter!.year!, _activeFilter!.month!),
+        );
+      case ListFilterType.yearly:
+        return 'Tahun ${_activeFilter!.year}';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pengeluaran'),
-        actions: [
-          PopupMenuButton<DateTime?>(
-            icon: const Icon(Icons.filter_list),
-            onSelected: _filterByMonth,
-            itemBuilder: (_) => [
-              const PopupMenuItem(value: null, child: Text('Semua')),
-              ...DateFormatter.getLastNMonths(6).map(
-                (month) => PopupMenuItem(
-                  value: month,
-                  child: Text(DateFormatter.formatMonthYear(month)),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Pengeluaran')),
       body: BlocBuilder<ExpenseBloc, ExpenseState>(
         builder: (context, state) {
           if (state is ExpenseLoading) {
@@ -125,7 +124,7 @@ class _ExpensePageState extends State<ExpensePage> {
                   const SizedBox(height: AppConstants.spacingMd),
                   ElevatedButton(
                     onPressed: () => context.read<ExpenseBloc>().add(
-                      LoadExpenses(month: _selectedMonth),
+                      LoadExpenses(filter: _activeFilter),
                     ),
                     child: const Text('Coba Lagi'),
                   ),
@@ -135,37 +134,9 @@ class _ExpensePageState extends State<ExpensePage> {
           }
 
           if (state is ExpenseLoaded) {
-            if (state.expenses.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.shopping_cart_outlined,
-                      size: 80,
-                      color: Colors.grey.shade300,
-                    ),
-                    const SizedBox(height: AppConstants.spacingMd),
-                    Text(
-                      'Belum ada pengeluaran',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey.shade500,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: AppConstants.spacingSm),
-                    Text(
-                      'Tap + untuk menambahkan',
-                      style: TextStyle(color: Colors.grey.shade400),
-                    ),
-                  ],
-                ),
-              );
-            }
-
             return Column(
               children: [
+                // Total card
                 Container(
                   width: double.infinity,
                   margin: const EdgeInsets.all(AppConstants.spacingMd),
@@ -201,76 +172,125 @@ class _ExpensePageState extends State<ExpensePage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (_selectedMonth != null)
+                      if (_activeFilter != null)
                         Padding(
                           padding: const EdgeInsets.only(
                             top: AppConstants.spacingXs,
                           ),
                           child: Text(
-                            DateFormatter.formatMonthYear(_selectedMonth!),
+                            _filterLabel(),
                             style: const TextStyle(color: Colors.white60),
                           ),
                         ),
                     ],
                   ),
                 ),
+
+                // Filter widget
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingMd,
+                  ),
+                  child: ListFilterWidget(
+                    onApply: _onFilterApply,
+                    accentColor: AppConstants.expenseColor,
+                  ),
+                ),
+                const SizedBox(height: AppConstants.spacingSm),
+
+                // List
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingSm,
-                    ),
-                    itemCount: state.expenses.length,
-                    itemBuilder: (context, index) {
-                      final expense = state.expenses[index];
-                      return Card(
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.spacingMd,
-                            vertical: AppConstants.spacingSm,
-                          ),
-                          leading: Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: AppConstants.expenseColor.withAlpha(26),
-                              borderRadius: BorderRadius.circular(
-                                AppConstants.radiusSm,
+                  child: state.expenses.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.shopping_cart_outlined,
+                                size: 80,
+                                color: Colors.grey.shade300,
                               ),
-                            ),
-                            child: const Icon(
-                              Icons.arrow_upward,
-                              color: AppConstants.expenseColor,
-                            ),
+                              const SizedBox(height: AppConstants.spacingMd),
+                              Text(
+                                'Belum ada pengeluaran',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: AppConstants.spacingSm),
+                              Text(
+                                'Tap + untuk menambahkan',
+                                style: TextStyle(color: Colors.grey.shade400),
+                              ),
+                            ],
                           ),
-                          title: Text(
-                            expense.description ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.spacingSm,
                           ),
-                          subtitle: Text(
-                            DateFormatter.formatDisplay(
-                              expense.transactionDate,
-                            ),
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 12,
-                            ),
-                          ),
-                          trailing: Text(
-                            CurrencyFormatter.formatRupiah(expense.amount),
-                            style: const TextStyle(
-                              color: AppConstants.expenseColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          onTap: () => _showForm(expense: expense),
-                          onLongPress: () {
-                            if (expense.id != null) _confirmDelete(expense.id!);
+                          itemCount: state.expenses.length,
+                          itemBuilder: (context, index) {
+                            final expense = state.expenses[index];
+                            return Card(
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppConstants.spacingMd,
+                                  vertical: AppConstants.spacingSm,
+                                ),
+                                leading: Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: AppConstants.expenseColor.withAlpha(
+                                      26,
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      AppConstants.radiusSm,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.arrow_upward,
+                                    color: AppConstants.expenseColor,
+                                  ),
+                                ),
+                                title: Text(
+                                  expense.description ?? '',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  DateFormatter.formatDisplay(
+                                    expense.transactionDate,
+                                  ),
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                trailing: Text(
+                                  CurrencyFormatter.formatRupiah(
+                                    expense.amount,
+                                  ),
+                                  style: const TextStyle(
+                                    color: AppConstants.expenseColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                onTap: () => _showForm(expense: expense),
+                                onLongPress: () {
+                                  if (expense.id != null) {
+                                    _confirmDelete(expense.id!);
+                                  }
+                                },
+                              ),
+                            );
                           },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             );

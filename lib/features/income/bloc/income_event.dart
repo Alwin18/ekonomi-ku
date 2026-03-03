@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../core/models/list_filter.dart';
 import '../models/income_model.dart';
 
 abstract class IncomeEvent extends Equatable {
@@ -9,11 +10,11 @@ abstract class IncomeEvent extends Equatable {
 }
 
 class LoadIncomes extends IncomeEvent {
-  final DateTime? month;
-  const LoadIncomes({this.month});
+  final ListFilter? filter;
+  const LoadIncomes({this.filter});
 
   @override
-  List<Object?> get props => [month];
+  List<Object?> get props => [filter];
 }
 
 class AddIncome extends IncomeEvent {

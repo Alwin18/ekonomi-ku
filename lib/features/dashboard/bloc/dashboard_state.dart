@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../core/models/list_filter.dart';
 import '../models/dashboard_model.dart';
 
 abstract class DashboardState extends Equatable {
@@ -14,11 +15,12 @@ class DashboardLoading extends DashboardState {}
 
 class DashboardLoaded extends DashboardState {
   final DashboardSummary summary;
+  final ListFilter? activeFilter;
 
-  const DashboardLoaded(this.summary);
+  const DashboardLoaded(this.summary, {this.activeFilter});
 
   @override
-  List<Object?> get props => [summary];
+  List<Object?> get props => [summary, activeFilter];
 }
 
 class DashboardError extends DashboardState {

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../core/models/list_filter.dart';
 import '../models/loan_model.dart';
 
 abstract class LoanEvent extends Equatable {
@@ -10,10 +11,11 @@ abstract class LoanEvent extends Equatable {
 
 class LoadLoans extends LoanEvent {
   final String? statusFilter;
-  const LoadLoans({this.statusFilter});
+  final ListFilter? filter;
+  const LoadLoans({this.statusFilter, this.filter});
 
   @override
-  List<Object?> get props => [statusFilter];
+  List<Object?> get props => [statusFilter, filter];
 }
 
 class AddLoan extends LoanEvent {

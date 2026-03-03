@@ -17,8 +17,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   ) async {
     emit(DashboardLoading());
     try {
-      final summary = await repository.getSummary();
-      emit(DashboardLoaded(summary));
+      final summary = await repository.getSummary(filter: event.filter);
+      emit(DashboardLoaded(summary, activeFilter: event.filter));
     } catch (e) {
       emit(DashboardError(e.toString()));
     }
@@ -29,8 +29,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     Emitter<DashboardState> emit,
   ) async {
     try {
-      final summary = await repository.getSummary();
-      emit(DashboardLoaded(summary));
+      final summary = await repository.getSummary(filter: event.filter);
+      emit(DashboardLoaded(summary, activeFilter: event.filter));
     } catch (e) {
       emit(DashboardError(e.toString()));
     }

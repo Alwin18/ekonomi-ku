@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/models/list_filter.dart';
 import '../models/loan_model.dart';
 
 class LoanRepository {
@@ -8,12 +9,21 @@ class LoanRepository {
   LoanRepository({SupabaseClient? client})
     : _client = client ?? Supabase.instance.client;
 
-  Future<List<LoanModel>> getAll({String? statusFilter}) async {
+  Future<List<LoanModel>> getAll({
+    String? statusFilter,
+    ListFilter? filter,
+  }) async {
     try {
       var query = _client.from(AppConstants.loansTable).select();
 
       if (statusFilter != null) {
         query = query.eq('status', statusFilter);
+      }
+
+      if (filter != null) {
+        query = query
+            .gte('created_at', filter.startDateIso)
+            .lte('created_at', filter.endDateIso);
       }
 
       final response = await query.order('created_at', ascending: false);

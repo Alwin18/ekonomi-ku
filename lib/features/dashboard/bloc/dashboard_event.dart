@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../core/models/list_filter.dart';
 
 abstract class DashboardEvent extends Equatable {
   const DashboardEvent();
@@ -8,9 +9,17 @@ abstract class DashboardEvent extends Equatable {
 }
 
 class LoadDashboard extends DashboardEvent {
-  const LoadDashboard();
+  final ListFilter? filter;
+  const LoadDashboard({this.filter});
+
+  @override
+  List<Object?> get props => [filter];
 }
 
 class RefreshDashboard extends DashboardEvent {
-  const RefreshDashboard();
+  final ListFilter? filter;
+  const RefreshDashboard({this.filter});
+
+  @override
+  List<Object?> get props => [filter];
 }

@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/models/list_filter.dart';
 import '../models/expense_model.dart';
 
 class ExpenseRepository {
@@ -8,16 +9,14 @@ class ExpenseRepository {
   ExpenseRepository({SupabaseClient? client})
     : _client = client ?? Supabase.instance.client;
 
-  Future<List<ExpenseModel>> getAll({DateTime? month}) async {
+  Future<List<ExpenseModel>> getAll({ListFilter? filter}) async {
     try {
       var query = _client.from(AppConstants.expensesTable).select();
 
-      if (month != null) {
-        final start = DateTime(month.year, month.month, 1);
-        final end = DateTime(month.year, month.month + 1, 0);
+      if (filter != null) {
         query = query
-            .gte('transaction_date', start.toIso8601String().split('T').first)
-            .lte('transaction_date', end.toIso8601String().split('T').first);
+            .gte('transaction_date', filter.startDateIso)
+            .lte('transaction_date', filter.endDateIso);
       }
 
       final response = await query.order('transaction_date', ascending: false);

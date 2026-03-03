@@ -2,8 +2,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/models/list_filter.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/widgets/list_filter_widget.dart';
 import '../../auth/bloc/auth_bloc.dart';
 import '../../auth/bloc/auth_event.dart';
 import '../bloc/dashboard_bloc.dart';
@@ -47,6 +49,10 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
     );
+  }
+
+  void _onFilterApply(ListFilter? filter) {
+    context.read<DashboardBloc>().add(LoadDashboard(filter: filter));
   }
 
   @override
@@ -103,7 +109,7 @@ class _DashboardPageState extends State<DashboardPage> {
           }
 
           if (state is DashboardLoaded) {
-            return _buildDashboard(state.summary);
+            return _buildDashboard(state.summary, state.activeFilter);
           }
 
           return const SizedBox.shrink();
@@ -112,10 +118,12 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildDashboard(DashboardSummary summary) {
+  Widget _buildDashboard(DashboardSummary summary, ListFilter? activeFilter) {
     return RefreshIndicator(
       onRefresh: () async {
-        context.read<DashboardBloc>().add(const RefreshDashboard());
+        context.read<DashboardBloc>().add(
+          RefreshDashboard(filter: activeFilter),
+        );
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -211,6 +219,10 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: AppConstants.spacingLg),
 
+            // ── Filter Section ──
+            ListFilterWidget(onApply: _onFilterApply),
+            const SizedBox(height: AppConstants.spacingLg),
+
             // Chart section
             const Text(
               'Pemasukan vs Pengeluaran',
@@ -222,7 +234,7 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: AppConstants.spacingXs),
             Text(
-              '6 bulan terakhir',
+              _chartSubtitle(activeFilter),
               style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
             ),
             const SizedBox(height: AppConstants.spacingMd),
@@ -259,6 +271,19 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       ),
     );
+  }
+
+  String _chartSubtitle(ListFilter? filter) {
+    if (filter == null) return '6 bulan terakhir';
+    switch (filter.filterType) {
+      case ListFilterType.dateRange:
+        return '${DateFormatter.formatDisplay(filter.startDate!)} – ${DateFormatter.formatDisplay(filter.endDate!)}';
+      case ListFilterType.monthly:
+        final dt = DateTime(filter.year!, filter.month!);
+        return DateFormatter.formatMonthYear(dt);
+      case ListFilterType.yearly:
+        return 'Tahun ${filter.year}';
+    }
   }
 
   Widget _buildBarChart(List<MonthlyData> monthlyData) {

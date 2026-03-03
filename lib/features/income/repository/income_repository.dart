@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/models/list_filter.dart';
 import '../models/income_model.dart';
 
 class IncomeRepository {
@@ -8,17 +9,14 @@ class IncomeRepository {
   IncomeRepository({SupabaseClient? client})
     : _client = client ?? Supabase.instance.client;
 
-  /// Fetch all incomes, optionally filtered by month
-  Future<List<IncomeModel>> getAll({DateTime? month}) async {
+  Future<List<IncomeModel>> getAll({ListFilter? filter}) async {
     try {
       var query = _client.from(AppConstants.incomesTable).select();
 
-      if (month != null) {
-        final start = DateTime(month.year, month.month, 1);
-        final end = DateTime(month.year, month.month + 1, 0);
+      if (filter != null) {
         query = query
-            .gte('transaction_date', start.toIso8601String().split('T').first)
-            .lte('transaction_date', end.toIso8601String().split('T').first);
+            .gte('transaction_date', filter.startDateIso)
+            .lte('transaction_date', filter.endDateIso);
       }
 
       final response = await query.order('transaction_date', ascending: false);
@@ -30,7 +28,6 @@ class IncomeRepository {
     }
   }
 
-  /// Create a new income
   Future<IncomeModel> create(IncomeModel income) async {
     try {
       final response = await _client
@@ -44,7 +41,6 @@ class IncomeRepository {
     }
   }
 
-  /// Update an existing income
   Future<IncomeModel> update(IncomeModel income) async {
     try {
       final response = await _client
@@ -59,7 +55,6 @@ class IncomeRepository {
     }
   }
 
-  /// Delete an income by id
   Future<void> delete(String id) async {
     try {
       await _client.from(AppConstants.incomesTable).delete().eq('id', id);
@@ -68,7 +63,6 @@ class IncomeRepository {
     }
   }
 
-  /// Realtime stream of incomes
   Stream<List<IncomeModel>> stream() {
     return _client
         .from(AppConstants.incomesTable)

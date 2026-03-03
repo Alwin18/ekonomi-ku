@@ -1,11 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/models/list_filter.dart';
 import '../repository/expense_repository.dart';
 import 'expense_event.dart';
 import 'expense_state.dart';
 
 class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
   final ExpenseRepository repository;
-  DateTime? _currentMonth;
+  ListFilter? _currentFilter;
 
   ExpenseBloc({required this.repository}) : super(ExpenseInitial()) {
     on<LoadExpenses>(_onLoadExpenses);
@@ -20,8 +21,8 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
   ) async {
     emit(ExpenseLoading());
     try {
-      _currentMonth = event.month;
-      final expenses = await repository.getAll(month: event.month);
+      _currentFilter = event.filter;
+      final expenses = await repository.getAll(filter: event.filter);
       final total = expenses.fold<double>(0, (sum, e) => sum + e.amount);
       emit(ExpenseLoaded(expenses: expenses, totalExpense: total));
     } catch (e) {
@@ -35,7 +36,7 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
   ) async {
     try {
       await repository.create(event.expense);
-      add(LoadExpenses(month: _currentMonth));
+      add(LoadExpenses(filter: _currentFilter));
     } catch (e) {
       emit(ExpenseError(e.toString()));
     }
@@ -47,7 +48,7 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
   ) async {
     try {
       await repository.update(event.expense);
-      add(LoadExpenses(month: _currentMonth));
+      add(LoadExpenses(filter: _currentFilter));
     } catch (e) {
       emit(ExpenseError(e.toString()));
     }
@@ -59,7 +60,7 @@ class ExpenseBloc extends Bloc<ExpenseEvent, ExpenseState> {
   ) async {
     try {
       await repository.delete(event.id);
-      add(LoadExpenses(month: _currentMonth));
+      add(LoadExpenses(filter: _currentFilter));
     } catch (e) {
       emit(ExpenseError(e.toString()));
     }

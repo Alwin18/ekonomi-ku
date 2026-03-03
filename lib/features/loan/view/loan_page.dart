@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/models/list_filter.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/widgets/list_filter_widget.dart';
 import '../bloc/loan_bloc.dart';
 import '../bloc/loan_event.dart';
 import '../bloc/loan_state.dart';
@@ -18,6 +20,7 @@ class LoanPage extends StatefulWidget {
 
 class _LoanPageState extends State<LoanPage> {
   String? _statusFilter;
+  ListFilter? _activeFilter;
 
   @override
   void initState() {
@@ -95,7 +98,30 @@ class _LoanPageState extends State<LoanPage> {
 
   void _filterByStatus(String? status) {
     setState(() => _statusFilter = status);
-    context.read<LoanBloc>().add(LoadLoans(statusFilter: status));
+    context.read<LoanBloc>().add(
+      LoadLoans(statusFilter: status, filter: _activeFilter),
+    );
+  }
+
+  void _onDateFilterApply(ListFilter? filter) {
+    setState(() => _activeFilter = filter);
+    context.read<LoanBloc>().add(
+      LoadLoans(statusFilter: _statusFilter, filter: filter),
+    );
+  }
+
+  String _filterLabel() {
+    if (_activeFilter == null) return '';
+    switch (_activeFilter!.filterType) {
+      case ListFilterType.dateRange:
+        return '${DateFormatter.formatDisplay(_activeFilter!.startDate!)} – ${DateFormatter.formatDisplay(_activeFilter!.endDate!)}';
+      case ListFilterType.monthly:
+        return DateFormatter.formatMonthYear(
+          DateTime(_activeFilter!.year!, _activeFilter!.month!),
+        );
+      case ListFilterType.yearly:
+        return 'Tahun ${_activeFilter!.year}';
+    }
   }
 
   @override
@@ -145,7 +171,10 @@ class _LoanPageState extends State<LoanPage> {
                   const SizedBox(height: AppConstants.spacingMd),
                   ElevatedButton(
                     onPressed: () => context.read<LoanBloc>().add(
-                      LoadLoans(statusFilter: _statusFilter),
+                      LoadLoans(
+                        statusFilter: _statusFilter,
+                        filter: _activeFilter,
+                      ),
                     ),
                     child: const Text('Coba Lagi'),
                   ),
@@ -155,35 +184,6 @@ class _LoanPageState extends State<LoanPage> {
           }
 
           if (state is LoanLoaded) {
-            if (state.loans.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.handshake_outlined,
-                      size: 80,
-                      color: Colors.grey.shade300,
-                    ),
-                    const SizedBox(height: AppConstants.spacingMd),
-                    Text(
-                      'Belum ada pinjaman',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey.shade500,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: AppConstants.spacingSm),
-                    Text(
-                      'Tap + untuk menambahkan',
-                      style: TextStyle(color: Colors.grey.shade400),
-                    ),
-                  ],
-                ),
-              );
-            }
-
             return Column(
               children: [
                 // Summary card
@@ -236,159 +236,214 @@ class _LoanPageState extends State<LoanPage> {
                           ),
                         ],
                       ),
+                      if (_activeFilter != null)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: AppConstants.spacingXs,
+                          ),
+                          child: Text(
+                            _filterLabel(),
+                            style: const TextStyle(color: Colors.white60),
+                          ),
+                        ),
                     ],
                   ),
                 ),
 
+                // Date filter widget
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingMd,
+                  ),
+                  child: ListFilterWidget(
+                    onApply: _onDateFilterApply,
+                    accentColor: AppConstants.loanColor,
+                  ),
+                ),
+                const SizedBox(height: AppConstants.spacingSm),
+
                 // List
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingSm,
-                    ),
-                    itemCount: state.loans.length,
-                    itemBuilder: (context, index) {
-                      final loan = state.loans[index];
-                      final isOverdue =
-                          loan.isActive &&
-                          loan.dueDate != null &&
-                          loan.dueDate!.isBefore(DateTime.now());
-
-                      return Card(
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppConstants.spacingMd,
-                            vertical: AppConstants.spacingSm,
-                          ),
-                          leading: Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: loan.isPaid
-                                  ? AppConstants.incomeColor.withAlpha(26)
-                                  : AppConstants.loanColor.withAlpha(26),
-                              borderRadius: BorderRadius.circular(
-                                AppConstants.radiusSm,
-                              ),
-                            ),
-                            child: Icon(
-                              loan.isPaid ? Icons.check_circle : Icons.schedule,
-                              color: loan.isPaid
-                                  ? AppConstants.incomeColor
-                                  : AppConstants.loanColor,
-                            ),
-                          ),
-                          title: Row(
+                  child: state.loans.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  loan.description ?? '',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    decoration: loan.isPaid
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
+                              Icon(
+                                Icons.handshake_outlined,
+                                size: 80,
+                                color: Colors.grey.shade300,
+                              ),
+                              const SizedBox(height: AppConstants.spacingMd),
+                              Text(
+                                'Belum ada pinjaman',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              if (isOverdue)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
+                              const SizedBox(height: AppConstants.spacingSm),
+                              Text(
+                                'Tap + untuk menambahkan',
+                                style: TextStyle(color: Colors.grey.shade400),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.spacingSm,
+                          ),
+                          itemCount: state.loans.length,
+                          itemBuilder: (context, index) {
+                            final loan = state.loans[index];
+                            final isOverdue =
+                                loan.isActive &&
+                                loan.dueDate != null &&
+                                loan.dueDate!.isBefore(DateTime.now());
+
+                            return Card(
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppConstants.spacingMd,
+                                  vertical: AppConstants.spacingSm,
+                                ),
+                                leading: Container(
+                                  width: 48,
+                                  height: 48,
                                   decoration: BoxDecoration(
-                                    color: Colors.red.shade50,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    'Jatuh Tempo!',
-                                    style: TextStyle(
-                                      color: Colors.red.shade700,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
+                                    color: loan.isPaid
+                                        ? AppConstants.incomeColor.withAlpha(26)
+                                        : AppConstants.loanColor.withAlpha(26),
+                                    borderRadius: BorderRadius.circular(
+                                      AppConstants.radiusSm,
                                     ),
                                   ),
+                                  child: Icon(
+                                    loan.isPaid
+                                        ? Icons.check_circle
+                                        : Icons.schedule,
+                                    color: loan.isPaid
+                                        ? AppConstants.incomeColor
+                                        : AppConstants.loanColor,
+                                  ),
                                 ),
-                            ],
-                          ),
-                          subtitle: Text(
-                            loan.dueDate != null
-                                ? 'Jatuh tempo: ${DateFormatter.formatDisplay(loan.dueDate!)}'
-                                : 'Tanpa jatuh tempo',
-                            style: TextStyle(
-                              color: isOverdue
-                                  ? Colors.red.shade400
-                                  : Colors.grey.shade500,
-                              fontSize: 12,
-                            ),
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                CurrencyFormatter.formatRupiah(loan.amount),
-                                style: TextStyle(
-                                  color: loan.isPaid
-                                      ? AppConstants.incomeColor
-                                      : AppConstants.loanColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              Text(
-                                loan.isPaid ? 'Lunas' : 'Aktif',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: loan.isPaid
-                                      ? AppConstants.incomeColor
-                                      : AppConstants.loanColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          onTap: () => _showForm(loan: loan),
-                          onLongPress: () {
-                            if (loan.id == null) return;
-                            showModalBottomSheet(
-                              context: context,
-                              builder: (_) => SafeArea(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
+                                title: Row(
                                   children: [
-                                    if (loan.isActive)
-                                      ListTile(
-                                        leading: const Icon(
-                                          Icons.check_circle,
-                                          color: AppConstants.incomeColor,
+                                    Expanded(
+                                      child: Text(
+                                        loan.description ?? '',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          decoration: loan.isPaid
+                                              ? TextDecoration.lineThrough
+                                              : null,
                                         ),
-                                        title: const Text('Tandai Lunas'),
-                                        onTap: () {
-                                          Navigator.pop(context);
-                                          _confirmMarkAsPaid(loan.id!);
-                                        },
                                       ),
-                                    ListTile(
-                                      leading: const Icon(
-                                        Icons.delete,
-                                        color: AppConstants.expenseColor,
+                                    ),
+                                    if (isOverdue)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade50,
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Jatuh Tempo!',
+                                          style: TextStyle(
+                                            color: Colors.red.shade700,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                                       ),
-                                      title: const Text('Hapus'),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        _confirmDelete(loan.id!);
-                                      },
+                                  ],
+                                ),
+                                subtitle: Text(
+                                  loan.dueDate != null
+                                      ? 'Jatuh tempo: ${DateFormatter.formatDisplay(loan.dueDate!)}'
+                                      : 'Tanpa jatuh tempo',
+                                  style: TextStyle(
+                                    color: isOverdue
+                                        ? Colors.red.shade400
+                                        : Colors.grey.shade500,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      CurrencyFormatter.formatRupiah(
+                                        loan.amount,
+                                      ),
+                                      style: TextStyle(
+                                        color: loan.isPaid
+                                            ? AppConstants.incomeColor
+                                            : AppConstants.loanColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    Text(
+                                      loan.isPaid ? 'Lunas' : 'Aktif',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: loan.isPaid
+                                            ? AppConstants.incomeColor
+                                            : AppConstants.loanColor,
+                                      ),
                                     ),
                                   ],
                                 ),
+                                onTap: () => _showForm(loan: loan),
+                                onLongPress: () {
+                                  if (loan.id == null) return;
+                                  showModalBottomSheet(
+                                    context: context,
+                                    builder: (_) => SafeArea(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (loan.isActive)
+                                            ListTile(
+                                              leading: const Icon(
+                                                Icons.check_circle,
+                                                color: AppConstants.incomeColor,
+                                              ),
+                                              title: const Text('Tandai Lunas'),
+                                              onTap: () {
+                                                Navigator.pop(context);
+                                                _confirmMarkAsPaid(loan.id!);
+                                              },
+                                            ),
+                                          ListTile(
+                                            leading: const Icon(
+                                              Icons.delete,
+                                              color: AppConstants.expenseColor,
+                                            ),
+                                            title: const Text('Hapus'),
+                                            onTap: () {
+                                              Navigator.pop(context);
+                                              _confirmDelete(loan.id!);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             );
                           },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             );
