@@ -10,6 +10,7 @@ import 'features/dashboard/view/dashboard_page.dart';
 import 'features/expense/view/expense_page.dart';
 import 'features/income/view/income_page.dart';
 import 'features/loan/view/loan_page.dart';
+import 'features/statistics/view/statistics_page.dart';
 
 /// Root widget that wraps everything in MaterialApp with auth gate.
 class AppShell extends StatelessWidget {
@@ -50,6 +51,7 @@ class _MainShellState extends State<_MainShell> {
     IncomePage(),
     ExpensePage(),
     LoanPage(),
+    StatisticsPage(),
   ];
 
   void _onTabChanged(int index) {
@@ -88,6 +90,11 @@ class _MainShellState extends State<_MainShell> {
             icon: Icon(Icons.handshake_outlined),
             activeIcon: Icon(Icons.handshake),
             label: 'Pinjaman',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_outlined),
+            activeIcon: Icon(Icons.bar_chart),
+            label: 'Statistik',
           ),
         ],
       ),

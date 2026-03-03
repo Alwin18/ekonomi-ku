@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../category/models/category_model.dart';
+import '../../../category/repository/category_repository.dart';
 import '../../models/income_model.dart';
 
 class IncomeFormDialog extends StatefulWidget {
@@ -17,6 +19,10 @@ class _IncomeFormDialogState extends State<IncomeFormDialog> {
   late final TextEditingController _amountController;
   late final TextEditingController _descriptionController;
   late DateTime _selectedDate;
+  String? _selectedCategoryId;
+
+  List<CategoryModel> _categories = [];
+  bool _loadingCategories = true;
 
   bool get isEditing => widget.income != null;
 
@@ -30,6 +36,24 @@ class _IncomeFormDialogState extends State<IncomeFormDialog> {
       text: widget.income?.description ?? '',
     );
     _selectedDate = widget.income?.transactionDate ?? DateTime.now();
+    _selectedCategoryId = widget.income?.categoryId;
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await CategoryRepository().getAll(type: 'income');
+      if (mounted) {
+        setState(() {
+          _categories = categories;
+          _loadingCategories = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadingCategories = false);
+      }
+    }
   }
 
   @override
@@ -59,6 +83,7 @@ class _IncomeFormDialogState extends State<IncomeFormDialog> {
       amount: double.parse(_amountController.text),
       description: _descriptionController.text.trim(),
       transactionDate: _selectedDate,
+      categoryId: _selectedCategoryId,
     );
 
     Navigator.of(context).pop(income);
@@ -146,6 +171,32 @@ class _IncomeFormDialogState extends State<IncomeFormDialog> {
                   return null;
                 },
               ),
+              const SizedBox(height: AppConstants.spacingMd),
+
+              // Category dropdown
+              _loadingCategories
+                  ? const LinearProgressIndicator()
+                  : DropdownButtonFormField<String?>(
+                      value: _selectedCategoryId,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategori (Opsional)',
+                        prefixIcon: Icon(Icons.category),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Tanpa Kategori'),
+                        ),
+                        ..._categories.map(
+                          (cat) => DropdownMenuItem<String?>(
+                            value: cat.id,
+                            child: Text(cat.name),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => _selectedCategoryId = value),
+                    ),
               const SizedBox(height: AppConstants.spacingMd),
 
               // Date picker

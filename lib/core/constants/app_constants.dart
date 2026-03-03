@@ -7,6 +7,8 @@ class AppConstants {
   static const String incomesTable = 'incomes';
   static const String expensesTable = 'expenses';
   static const String loansTable = 'loans';
+  static const String categoriesTable = 'categories';
+  static const String budgetsTable = 'budgets';
 
   // Colors
   static const Color primaryColor = Color(0xFF00897B);

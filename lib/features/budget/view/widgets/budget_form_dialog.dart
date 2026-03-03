@@ -3,45 +3,47 @@ import 'package:flutter/services.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../category/models/category_model.dart';
 import '../../../category/repository/category_repository.dart';
-import '../../models/expense_model.dart';
+import '../../models/budget_model.dart';
 
-class ExpenseFormDialog extends StatefulWidget {
-  final ExpenseModel? expense;
+class BudgetFormDialog extends StatefulWidget {
+  final BudgetModel? budget;
+  final int month;
+  final int year;
 
-  const ExpenseFormDialog({super.key, this.expense});
+  const BudgetFormDialog({
+    super.key,
+    this.budget,
+    required this.month,
+    required this.year,
+  });
 
   @override
-  State<ExpenseFormDialog> createState() => _ExpenseFormDialogState();
+  State<BudgetFormDialog> createState() => _BudgetFormDialogState();
 }
 
-class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
+class _BudgetFormDialogState extends State<BudgetFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _amountController;
-  late final TextEditingController _descriptionController;
-  late DateTime _selectedDate;
   String? _selectedCategoryId;
 
   List<CategoryModel> _categories = [];
   bool _loadingCategories = true;
 
-  bool get isEditing => widget.expense != null;
+  bool get isEditing => widget.budget != null;
 
   @override
   void initState() {
     super.initState();
     _amountController = TextEditingController(
-      text: widget.expense?.amount.toStringAsFixed(0) ?? '',
+      text: widget.budget?.amount.toStringAsFixed(0) ?? '',
     );
-    _descriptionController = TextEditingController(
-      text: widget.expense?.description ?? '',
-    );
-    _selectedDate = widget.expense?.transactionDate ?? DateTime.now();
-    _selectedCategoryId = widget.expense?.categoryId;
+    _selectedCategoryId = widget.budget?.categoryId;
     _loadCategories();
   }
 
   Future<void> _loadCategories() async {
     try {
+      // Load expense categories for budgeting
       final categories = await CategoryRepository().getAll(type: 'expense');
       if (mounted) {
         setState(() {
@@ -59,34 +61,27 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
   @override
   void dispose() {
     _amountController.dispose();
-    _descriptionController.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
   }
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedCategoryId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih kategori terlebih dahulu')),
+      );
+      return;
+    }
 
-    final expense = ExpenseModel(
-      id: widget.expense?.id,
+    final budget = BudgetModel(
+      id: widget.budget?.id,
+      categoryId: _selectedCategoryId!,
       amount: double.parse(_amountController.text),
-      description: _descriptionController.text.trim(),
-      transactionDate: _selectedDate,
-      categoryId: _selectedCategoryId,
+      month: widget.month,
+      year: widget.year,
     );
 
-    Navigator.of(context).pop(expense);
+    Navigator.of(context).pop(budget);
   }
 
   @override
@@ -124,7 +119,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                 ),
               ),
               Text(
-                isEditing ? 'Edit Pengeluaran' : 'Tambah Pengeluaran',
+                isEditing ? 'Edit Anggaran' : 'Tambah Anggaran',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -132,12 +127,44 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                 ),
               ),
               const SizedBox(height: AppConstants.spacingLg),
+
+              // Category dropdown
+              _loadingCategories
+                  ? const LinearProgressIndicator()
+                  : DropdownButtonFormField<String?>(
+                      value: _selectedCategoryId,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategori',
+                        prefixIcon: Icon(Icons.category),
+                      ),
+                      items: _categories
+                          .map(
+                            (cat) => DropdownMenuItem<String?>(
+                              value: cat.id,
+                              child: Text(cat.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: isEditing
+                          ? null
+                          : (value) =>
+                                setState(() => _selectedCategoryId = value),
+                      validator: (value) {
+                        if (value == null) {
+                          return 'Pilih kategori';
+                        }
+                        return null;
+                      },
+                    ),
+              const SizedBox(height: AppConstants.spacingMd),
+
+              // Amount field
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(
-                  labelText: 'Jumlah (Rp)',
+                  labelText: 'Jumlah Anggaran (Rp)',
                   prefixIcon: Icon(Icons.attach_money),
                 ),
                 validator: (value) {
@@ -151,70 +178,15 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: AppConstants.spacingMd),
-              TextFormField(
-                controller: _descriptionController,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Deskripsi',
-                  prefixIcon: Icon(Icons.description),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Deskripsi harus diisi';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: AppConstants.spacingMd),
-
-              // Category dropdown
-              _loadingCategories
-                  ? const LinearProgressIndicator()
-                  : DropdownButtonFormField<String?>(
-                      value: _selectedCategoryId,
-                      decoration: const InputDecoration(
-                        labelText: 'Kategori (Opsional)',
-                        prefixIcon: Icon(Icons.category),
-                      ),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('Tanpa Kategori'),
-                        ),
-                        ..._categories.map(
-                          (cat) => DropdownMenuItem<String?>(
-                            value: cat.id,
-                            child: Text(cat.name),
-                          ),
-                        ),
-                      ],
-                      onChanged: (value) =>
-                          setState(() => _selectedCategoryId = value),
-                    ),
-              const SizedBox(height: AppConstants.spacingMd),
-
-              InkWell(
-                onTap: _pickDate,
-                borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Tanggal',
-                    prefixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(
-                    '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
-              ),
               const SizedBox(height: AppConstants.spacingLg),
+
+              // Submit button
               ElevatedButton.icon(
                 onPressed: _submit,
                 icon: Icon(isEditing ? Icons.save : Icons.add),
                 label: Text(isEditing ? 'Simpan' : 'Tambah'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.expenseColor,
+                  backgroundColor: AppConstants.primaryColor,
                   padding: const EdgeInsets.symmetric(
                     vertical: AppConstants.spacingMd,
                   ),

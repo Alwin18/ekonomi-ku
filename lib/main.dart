@@ -7,6 +7,10 @@ import 'app.dart';
 import 'features/auth/bloc/auth_bloc.dart';
 import 'features/auth/bloc/auth_event.dart';
 import 'features/auth/repository/auth_repository.dart';
+import 'features/budget/bloc/budget_bloc.dart';
+import 'features/budget/repository/budget_repository.dart';
+import 'features/category/bloc/category_bloc.dart';
+import 'features/category/repository/category_repository.dart';
 import 'features/dashboard/bloc/dashboard_bloc.dart';
 import 'features/dashboard/repository/dashboard_repository.dart';
 import 'features/expense/bloc/expense_bloc.dart';
@@ -51,6 +55,10 @@ class EkonomiKuApp extends StatelessWidget {
           create: (_) => ExpenseBloc(repository: ExpenseRepository()),
         ),
         BlocProvider(create: (_) => LoanBloc(repository: LoanRepository())),
+        BlocProvider(
+          create: (_) => CategoryBloc(repository: CategoryRepository()),
+        ),
+        BlocProvider(create: (_) => BudgetBloc(repository: BudgetRepository())),
       ],
       child: const AppShell(),
     );

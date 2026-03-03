@@ -7,6 +7,8 @@ class IncomeModel extends Equatable {
   final double amount;
   final String? description;
   final DateTime transactionDate;
+  final String? categoryId;
+  final String? categoryName;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -16,6 +18,8 @@ class IncomeModel extends Equatable {
     required this.amount,
     this.description,
     required this.transactionDate,
+    this.categoryId,
+    this.categoryName,
     this.createdAt,
     this.updatedAt,
   });
@@ -27,6 +31,8 @@ class IncomeModel extends Equatable {
       amount: (json['amount'] as num).toDouble(),
       description: json['description'] as String?,
       transactionDate: DateTime.parse(json['transaction_date'] as String),
+      categoryId: json['category_id'] as String?,
+      categoryName: json['category_name'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -43,6 +49,7 @@ class IncomeModel extends Equatable {
       'amount': amount,
       'description': description,
       'transaction_date': transactionDate.toIso8601String().split('T').first,
+      if (categoryId != null) 'category_id': categoryId,
     };
   }
 
@@ -52,6 +59,8 @@ class IncomeModel extends Equatable {
     double? amount,
     String? description,
     DateTime? transactionDate,
+    String? categoryId,
+    String? categoryName,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -61,6 +70,8 @@ class IncomeModel extends Equatable {
       amount: amount ?? this.amount,
       description: description ?? this.description,
       transactionDate: transactionDate ?? this.transactionDate,
+      categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -73,6 +84,8 @@ class IncomeModel extends Equatable {
     amount,
     description,
     transactionDate,
+    categoryId,
+    categoryName,
     createdAt,
     updatedAt,
   ];
